@@ -76,6 +76,7 @@
     // laptop screens — see OPE-2056 visual smoke 2026-06-04.)
     frame.setAttribute("height", "580");
     frame.style.height = "580px";
+    frame.style.minHeight = "580px"; // override .e3-tour-card__iframe min-height: 700px from CSS
     // Defense in depth: even though src is a validated calendar.google.com URL,
     // sandbox the frame to the minimum Google Calendar needs — scripts + forms
     // to run the booking flow, same-origin so Calendar can read its own session,
