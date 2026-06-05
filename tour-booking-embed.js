@@ -69,7 +69,13 @@
     frame.setAttribute("frameborder", "0");
     frame.referrerPolicy = "strict-origin-when-cross-origin";
     frame.setAttribute("width", "100%");
-    frame.setAttribute("height", "700");
+    // Google Calendar's Appointment Schedule widget has its own internal
+    // scroll for the time-slot list. 580px shows the date grid + ~4 slots
+    // without dominating the viewport — users scroll inside the iframe to
+    // see remaining slots. (Was 700px which spilled out of frame on most
+    // laptop screens — see OPE-2056 visual smoke 2026-06-04.)
+    frame.setAttribute("height", "580");
+    frame.style.height = "580px";
     // Defense in depth: even though src is a validated calendar.google.com URL,
     // sandbox the frame to the minimum Google Calendar needs — scripts + forms
     // to run the booking flow, same-origin so Calendar can read its own session,
@@ -197,8 +203,45 @@
    * Both passes are idempotent: hoistAnchorIfHidden short-circuits when the
    * parent is visible; renderIframe / renderFallback re-render harmlessly.
    */
+  /*
+   * Legacy "Book a Tour" button on the rebuilt /locations/<slug> page (from
+   * the older e3-pages-bundle) links to the decommissioned Next.js wizard at
+   * /tour/<slug> — that route is OPE-1358 era and being replaced by THIS
+   * in-page iframe. Find any such anchor whose href targets the old wizard
+   * and rewrite it to scroll to the booking iframe. Idempotent: marks
+   * processed anchors with a data attribute so subsequent runs skip.
+   */
+  function rewriteLegacyTourButtons() {
+    var anchors = document.querySelectorAll(
+      'a[href*="/tour/"]:not([data-e3-tour-rewritten])'
+    );
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      // Only rewrite anchors whose href path is exactly /tour/<slug> (no extra
+      // segments) — leave any unrelated /tour/* deep links alone.
+      try {
+        var u = new URL(a.href, location.href);
+        if (!/^\/tour\/[^/]+\/?$/.test(u.pathname)) continue;
+      } catch (e) {
+        continue;
+      }
+      a.setAttribute("data-e3-tour-rewritten", "1");
+      a.setAttribute("href", "#" + SECTION_ID);
+      a.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var target = document.getElementById(SECTION_ID);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
   function runInit() {
-    try { init(); } catch (err) { captureAndRethrow(err); }
+    try {
+      init();
+      rewriteLegacyTourButtons();
+    } catch (err) {
+      captureAndRethrow(err);
+    }
   }
   function scheduleSecondPass() {
     // window.load fires AFTER all subresources + most footer scripts. Add a
