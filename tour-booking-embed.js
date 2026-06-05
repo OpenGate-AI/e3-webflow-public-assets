@@ -137,10 +137,31 @@
     throw err;
   }
 
+  /*
+   * Hoist the anchor out of any ancestor that's hidden (display:none).
+   * The Locations CMS template's <section> gets inline display:none by the
+   * older e3-pages-bundle.js (e3v2-built body class) which rebuilds the page
+   * into its own premium layout — that leaves our Designer-placed anchor
+   * inside a collapsed parent. Move the anchor to just-before the footer so
+   * it lives in the visible rebuilt content. No-op when the anchor is
+   * already visible. Safe to drop once the page-rebuild logic includes the
+   * tour-booking section directly (OPE-2091 follow-up).
+   */
+  function hoistAnchorIfHidden(container) {
+    var hidden = container.closest('[style*="display: none"], [style*="display:none"]');
+    if (!hidden) return container;
+    var footer = document.querySelector(".e3-footer-rebuild") || document.querySelector("footer");
+    var newParent = footer ? footer.parentNode : document.body;
+    if (footer) newParent.insertBefore(container, footer);
+    else newParent.appendChild(container);
+    return container;
+  }
+
   function init() {
     var container = document.getElementById(SECTION_ID);
     if (!container) return; // not a location page — nothing to render
     try {
+      container = hoistAnchorIfHidden(container);
       var url = container.getAttribute("data-appointment-schedule-url");
       if (isValidScheduleUrl(url)) {
         renderIframe(container, url.trim());
