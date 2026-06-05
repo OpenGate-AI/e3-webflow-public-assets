@@ -154,6 +154,18 @@
     var newParent = footer ? footer.parentNode : document.body;
     if (footer) newParent.insertBefore(container, footer);
     else newParent.appendChild(container);
+    /*
+     * The rebuilt-page body on /locations/* uses display:grid, so the hoisted
+     * anchor becomes a tight grid child unless we force it to span every
+     * column. Lock the layout inline so the iframe gets the full UMV-card
+     * width regardless of where it lands.
+     */
+    container.style.gridColumn = "1 / -1";
+    container.style.width = "100%";
+    container.style.maxWidth = "920px";
+    container.style.margin = "32px auto";
+    container.style.padding = "0 16px";
+    container.style.boxSizing = "border-box";
     return container;
   }
 
