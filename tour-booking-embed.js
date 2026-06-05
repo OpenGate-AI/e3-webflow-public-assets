@@ -1,0 +1,161 @@
+/*
+ * webflow-assets/tour-booking-embed.js — client script for the per-location
+ * Google Calendar Appointment Schedule embed (OPE-2056).
+ *
+ * Runs inside the Webflow Embed element on the Locations CMS Collection
+ * template (see appointment-schedule-embed.html for the paste-ready wrapper and
+ * README.md for the why/how). It reads the CMS-bound
+ * `data-appointment-schedule-url` attribute off `#tour-booking-section` and:
+ *   - valid Google Appointment Schedule URL  -> renders the booking iframe in a
+ *     UMV-style card ("Book a tour").
+ *   - empty / missing / invalid              -> renders the "coming soon,
+ *     contact operator" fallback card.
+ *
+ * Source of truth for the URL is config/locations.ts -> Webflow CMS (the
+ * `appointment-schedule-url` field); the operator never edits this script.
+ *
+ * Delivery: this file is the canonical logic; it is pasted INLINE into the
+ * Webflow Embed element (there is no JS asset-bundle / Site Custom Code
+ * pipeline in this repo today — see README.md). tour-booking-embed.test.ts
+ * drift-guards that the .html wrapper inlines this verbatim.
+ */
+(function () {
+  "use strict";
+
+  var SECTION_ID = "tour-booking-section";
+  var CONTACT_EMAIL = "operations@e3storage.com";
+
+  /*
+   * Only embed URLs we recognize as Google Appointment Schedule booking pages.
+   * The value comes from CMS (operator-pasted), so this guards against a
+   * javascript:/data: URI or an off-platform host ever reaching an iframe src.
+   */
+  function isValidScheduleUrl(raw) {
+    if (!raw || typeof raw !== "string") return false;
+    var trimmed = raw.trim();
+    if (!trimmed) return false;
+    try {
+      var u = new URL(trimmed);
+      // Exact host (no subdomain wildcard), https only, and a bare canonical
+      // Appointment Schedule path. Reject any query/fragment payload — these
+      // URLs are bare paths; if Google ever needs params we add them explicitly.
+      if (u.protocol !== "https:") return false;
+      if (u.hostname !== "calendar.google.com") return false;
+      if (u.search !== "" || u.hash !== "") return false;
+      // Bare canonical Appointment Schedule path only:
+      //   /calendar/appointments/schedules/<id>
+      //   /calendar/u/<n>/appointments/schedules/<id>   (signed-in variant)
+      // The /u/<n>/ form must STILL carry the appointments/schedules segment —
+      // bare /calendar/u/0, /calendar/u/0/settings, /calendar/u/0/r etc. are the
+      // operator's own Calendar UI, not booking pages, and must hit the fallback.
+      return /^\/calendar\/(u\/[^/]+\/)?appointments\/schedules\/[^/]+/.test(u.pathname);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function renderIframe(container, url) {
+    var card = document.createElement("div");
+    card.className = "e3-tour-card";
+
+    var title = document.createElement("h3");
+    title.className = "e3-tour-card__title";
+    title.textContent = "Book a tour";
+
+    var frame = document.createElement("iframe");
+    frame.className = "e3-tour-card__iframe";
+    frame.title = "Book a tour";
+    frame.loading = "lazy";
+    frame.setAttribute("frameborder", "0");
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.setAttribute("width", "100%");
+    frame.setAttribute("height", "700");
+    // Defense in depth: even though src is a validated calendar.google.com URL,
+    // sandbox the frame to the minimum Google Calendar needs — scripts + forms
+    // to run the booking flow, same-origin so Calendar can read its own session,
+    // popups for the confirmation window. NOTE: a popup inherits these sandbox
+    // flags; if a schedule is ever configured to REQUIRE booker Google sign-in,
+    // its OAuth popup would need `allow-popups-to-escape-sandbox` added here
+    // (re-test before adding). Public tour schedules need no booker sign-in, so
+    // we omit it. If the embed ever fails to load, allow-same-origin is first to drop.
+    frame.setAttribute("sandbox", "allow-scripts allow-forms allow-same-origin allow-popups");
+    frame.src = url; // validated by isValidScheduleUrl above
+
+    card.appendChild(title);
+    card.appendChild(frame);
+    container.replaceChildren(card);
+  }
+
+  function renderFallback(container) {
+    var card = document.createElement("div");
+    card.className = "e3-tour-card e3-tour-card--coming-soon";
+    // Announce the "coming soon" state to assistive tech.
+    card.setAttribute("role", "status");
+    card.setAttribute("aria-live", "polite");
+
+    var title = document.createElement("h3");
+    title.className = "e3-tour-card__title";
+    title.textContent = "Book a tour";
+
+    var pill = document.createElement("span");
+    pill.className = "e3-tour-pill";
+    pill.textContent = "Coming soon";
+
+    var body = document.createElement("p");
+    body.className = "e3-tour-card__body";
+    body.appendChild(
+      document.createTextNode("This location's tour-booking page is coming soon. Contact our team at ")
+    );
+    var link = document.createElement("a");
+    link.href = "mailto:" + CONTACT_EMAIL;
+    link.textContent = CONTACT_EMAIL;
+    body.appendChild(link);
+    body.appendChild(document.createTextNode(" to schedule."));
+
+    card.appendChild(title);
+    card.appendChild(pill);
+    card.appendChild(body);
+    container.replaceChildren(card);
+  }
+
+  /*
+   * No browser Sentry SDK is wired on the Webflow side yet (the canonical
+   * server-side captureAndRethrow lives in src/lib/sentry.ts). Mirror its
+   * contract here: emit a structured, greppable error, then RETHROW — never
+   * swallow. Wiring a real browser Sentry for Webflow assets is a follow-up.
+   */
+  function captureAndRethrow(err) {
+    try {
+      console.error("[e3-tour-booking] embed render failed", {
+        op: "webflow.tour_booking_embed",
+        message: err && err.message ? err.message : String(err),
+      });
+    } catch (loggingError) {
+      // console unavailable — fall through to the rethrow so nothing is swallowed.
+      void loggingError;
+    }
+    throw err;
+  }
+
+  function init() {
+    var container = document.getElementById(SECTION_ID);
+    if (!container) return; // not a location page — nothing to render
+    try {
+      var url = container.getAttribute("data-appointment-schedule-url");
+      if (isValidScheduleUrl(url)) {
+        renderIframe(container, url.trim());
+      } else {
+        renderFallback(container);
+      }
+    } catch (err) {
+      captureAndRethrow(err);
+    }
+  }
+
+  if (typeof document === "undefined") return;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
