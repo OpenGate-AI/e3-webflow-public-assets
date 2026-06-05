@@ -173,10 +173,35 @@
     }
   }
 
+  /*
+   * Two-pass init. Other site scripts (the older e3-pages-bundle) hide the
+   * Locations CMS template <section> at runtime, AFTER DOMContentLoaded but
+   * before window.load completes. If we only init on DOMContentLoaded, the
+   * parent is still visible — hoistAnchorIfHidden is a no-op — and then the
+   * bundle hides everything underneath our newly-rendered iframe. So we:
+   *   1. init() at DOMContentLoaded so the iframe is in the DOM early
+   *   2. re-init() on a short delay after window.load to catch the race
+   *      where the bundle hid the section between pass 1 and pass 2
+   * Both passes are idempotent: hoistAnchorIfHidden short-circuits when the
+   * parent is visible; renderIframe / renderFallback re-render harmlessly.
+   */
+  function runInit() {
+    try { init(); } catch (err) { captureAndRethrow(err); }
+  }
+  function scheduleSecondPass() {
+    // window.load fires AFTER all subresources + most footer scripts. Add a
+    // small extra delay to let any deferred bundle mutations settle.
+    setTimeout(runInit, 800);
+  }
   if (typeof document === "undefined") return;
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", runInit);
   } else {
-    init();
+    runInit();
+  }
+  if (document.readyState === "complete") {
+    scheduleSecondPass();
+  } else {
+    window.addEventListener("load", scheduleSecondPass);
   }
 })();
