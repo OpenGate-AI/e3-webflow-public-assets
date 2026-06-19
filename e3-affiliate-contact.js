@@ -1,7 +1,7 @@
 /*!
- * e3-affiliate-contact.js — OPE-2300 v1.4
- * Hides ALL legacy <section> direct body children on /affiliate and /get-in-touch,
- * then injects branded content. Forms POST to /api/marketing/forms-ingest.
+ * e3-affiliate-contact.js — OPE-2300 v1.5
+ * Affiliate page rewritten to be ABOUT THE E3 BRAND (not vendor stack internals).
+ * Contact page unchanged. Forms POST to /api/marketing/forms-ingest.
  */
 (function () {
   'use strict';
@@ -31,14 +31,11 @@
   function injectStyles() {
     if (document.getElementById('e3-affcon-styles')) return;
     var css = [
-      // Aggressive hide of every legacy direct-body-child <section> EXCEPT back-to-top
       "body.e3-page-affiliate > section:not(.back-to-top-section),",
       "body.e3-page-contact   > section:not(.back-to-top-section) { display: none !important; }",
-      // Re-show our injected wrapper's sections (they're inside .e3-injected, but be explicit)
       "body.e3-page-affiliate .e3-injected, body.e3-page-contact .e3-injected { display: block !important; }",
       "body.e3-page-affiliate .e3-injected section.e3-section,",
       "body.e3-page-contact   .e3-injected section.e3-section { display: block !important; }",
-
       ".e3-section { background: #fff; padding: clamp(56px, 9vw, 112px) 24px; }",
       ".e3-section + .e3-section { border-top: 1px solid #eceff3; }",
       ".e3-container { max-width: 1120px; margin: 0 auto; }",
@@ -51,6 +48,9 @@
       ".e3-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; margin-top:40px; }",
       ".e3-card { background:#fff; border:1px solid #e6eaf0; border-radius:14px; padding:28px; box-shadow:0 1px 2px rgba(15,23,42,.04); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }",
       ".e3-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(15,23,42,.06); border-color:#c9d4e2; }",
+      ".e3-stat { background:#fff; border:1px solid #e6eaf0; border-radius:14px; padding:32px 28px; text-align:center; }",
+      ".e3-stat-num { font:700 clamp(42px,5vw,56px)/1 'Oswald','Inter',system-ui,sans-serif; color:#C8102E; margin-bottom:8px; display:block; }",
+      ".e3-stat-label { font:500 14px/1.4 'DM Sans','Inter',system-ui,sans-serif; color:#4a5160; }",
       ".e3-list { list-style:none; padding:0; margin:16px 0 0; }",
       ".e3-list li { position:relative; padding:8px 0 8px 28px; font:400 16px/1.5 'DM Sans','Inter',system-ui,sans-serif; color:#4a5160; }",
       ".e3-list li::before { content:''; position:absolute; left:4px; top:16px; width:8px; height:8px; border-radius:50%; background:#2E74B5; }",
@@ -189,40 +189,70 @@
 
   function buildAffiliatePage() {
     var wrap = el('div', { class:'e3-injected', 'data-e3-page-rendered':'affiliate' });
+
+    // HERO — E3 brand-led, no platform-internals
     wrap.appendChild(el('section', { class:'e3-section e3-hero' },
       el('div', { class:'e3-container' },
-        el('span', { class:'e3-eyebrow' }, 'Partner with E3 Storage'),
-        el('h1', { class:'e3-h1' }, 'Run an E3 location. We handle the platform.'),
-        el('p', { class:'e3-lede' }, 'Bring the real estate. We bring the OpenGate-managed platform — CRM, member portal, payments, access control, daily ops digest. You operate the location; we run the system.'),
+        el('span', { class:'e3-eyebrow' }, 'Partner with e3storage'),
+        el('h1', { class:'e3-h1' }, 'Operate an E3 location in your market.'),
+        el('p', { class:'e3-lede' }, 'E3 storage is the largest DIY automotive club in the country. We license the brand, the member experience, and the operating model to qualified operators with the right real estate. You join the network; we make sure your members get the e3 experience.'),
         el('div', { style:'display:flex;gap:12px;flex-wrap:wrap;' },
           el('a', { class:'e3-btn-primary', href:'#apply' }, 'Apply to operate'),
-          el('a', { class:'e3-btn-secondary', href:'/about' }, 'How E3 works')
+          el('a', { class:'e3-btn-secondary', href:'/locations' }, 'See the network')
         )
       )
     ));
-    wrap.appendChild(el('section', { class:'e3-section' },
-      el('div', { class:'e3-container' },
-        el('span', { class:'e3-eyebrow' }, 'The model'),
-        el('h2', { class:'e3-h2' }, 'Three customer-paid vendors. Everything else is on us.'),
-        el('p', { class:'e3-lede' }, 'Every E3 affiliate runs on the same fully-managed software stack. You pay for the three vendors below. OpenGate absorbs every other platform cost — the CRM, the member portal, hosting, error monitoring, support tools — inside the per-location managed-services fee.'),
-        el('div', { class:'e3-grid' },
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Google Workspace'), el('p', { class:'e3-p' }, 'Business Standard — per seat. Email, eSign, Drive, SSO, Calendar, Appointment Schedule for tour bookings.')),
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Kisi'), el('p', { class:'e3-p' }, 'Physical access control on per-member groups. You configure your facility; the platform provisions every member automatically.')),
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Stripe Connect'), el('p', { class:'e3-p' }, 'Transactional fees only. Credit card fees pass to the member; ACH fees are absorbed by E3 corporate. No monthly Stripe charges.'))
-        )
-      )
-    ));
+
+    // WHY E3 — brand stats
     wrap.appendChild(el('section', { class:'e3-section', style:'background:#f6f8fb;' },
       el('div', { class:'e3-container' },
-        el('span', { class:'e3-eyebrow' }, 'What you get'),
-        el('h2', { class:'e3-h2' }, 'A fully-managed operating platform on day one.'),
+        el('span', { class:'e3-eyebrow' }, 'Why partner with E3'),
+        el('h2', { class:'e3-h2' }, 'A national brand. A devoted membership. Recurring revenue.'),
+        el('p', { class:'e3-lede' }, 'Members join e3 because they want secure climate-controlled storage, the DIY shop they cannot get at home, and the community of fellow enthusiasts. That demand exists in every metro we have not opened yet.'),
         el('div', { class:'e3-grid' },
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Member-facing'), el('p', { class:'e3-p' }, 'Custom Member Portal: online signup, agreement e-sign, payment method on file, asset booking, billing history, concierge requests, message board, activity timeline. Mobile-first; iPad-ready.')),
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Operator-facing'), el('p', { class:'e3-p' }, 'Operator Dashboard with leads from the marketing site, tour calendar wired to Google Appointment Schedule, CRM kanban (lead, tour, sign, pay), asset booking inbox, daily 7am digest email.')),
-          el('div', { class:'e3-card' }, el('h3', { class:'e3-h3' }, 'Corporate-facing'), el('p', { class:'e3-p' }, 'Multi-location rollup, monthly Connect disbursements, per-location financial observability, QBR-ready reporting. You see your numbers; corporate sees the system.'))
+          el('div', { class:'e3-stat' },
+            el('span', { class:'e3-stat-num' }, '11'),
+            el('span', { class:'e3-stat-label' }, 'Locations across 5 states')
+          ),
+          el('div', { class:'e3-stat' },
+            el('span', { class:'e3-stat-num' }, '2010'),
+            el('span', { class:'e3-stat-label' }, 'Year established')
+          ),
+          el('div', { class:'e3-stat' },
+            el('span', { class:'e3-stat-num' }, '24/7'),
+            el('span', { class:'e3-stat-label' }, 'Reserved member access')
+          )
         )
       )
     ));
+
+    // WHAT YOU GET — brand benefits, not vendor stack
+    wrap.appendChild(el('section', { class:'e3-section' },
+      el('div', { class:'e3-container' },
+        el('span', { class:'e3-eyebrow' }, 'What you get'),
+        el('h2', { class:'e3-h2' }, 'The E3 brand, the playbook, and the system to run it.'),
+        el('div', { class:'e3-grid' },
+          el('div', { class:'e3-card' },
+            el('h3', { class:'e3-h3' }, 'The e3storage® brand'),
+            el('p', { class:'e3-p' }, 'License the brand members already trust. National marketing, the e3 visual identity, and inclusion in the locations directory drive members to your facility on day one.')
+          ),
+          el('div', { class:'e3-card' },
+            el('h3', { class:'e3-h3' }, 'The operating playbook'),
+            el('p', { class:'e3-p' }, 'The member experience, pricing structure, amenities standard, and operating procedures that scale — refined across 11 locations.')
+          ),
+          el('div', { class:'e3-card' },
+            el('h3', { class:'e3-h3' }, 'Operator + member software'),
+            el('p', { class:'e3-p' }, 'A managed operator dashboard for leads, tours, members, and bookings. A branded member portal for signup, billing, access, and asset reservations. Nothing to build; nothing to maintain.')
+          ),
+          el('div', { class:'e3-card' },
+            el('h3', { class:'e3-h3' }, 'Onboarding + ongoing support'),
+            el('p', { class:'e3-p' }, 'Buildout reference package, vendor relationships, location onboarding wizard, and a corporate point of contact for the lifetime of your operation.')
+          )
+        )
+      )
+    ));
+
+    // WHAT YOU BRING + WHO FITS
     wrap.appendChild(el('section', { class:'e3-section' },
       el('div', { class:'e3-container' },
         el('div', { class:'e3-two-col' },
@@ -231,24 +261,26 @@
             el('h2', { class:'e3-h2' }, 'Real estate. A team. Local ownership.'),
             el('ul', { class:'e3-list' },
               el('li', null, 'A 15,000–40,000 sq ft climate-controlled facility with bay doors sized for cars, boats, and RVs.'),
-              el('li', null, 'Three-phase power and the ability to install Kisi-controlled doors.'),
+              el('li', null, 'Three-phase power and the ability to install secure access doors.'),
               el('li', null, 'A small operations team — typically a location manager plus one to three associates.'),
-              el('li', null, 'Light buildout — member lounge, two-post lifts, detail bays, and the e3 wayfinding kit.')
+              el('li', null, 'Light buildout — member lounge, two-post lifts, detail bays, e3 wayfinding kit. We share a reference package; you control the spend.')
             )
           ),
           el('div', null,
             el('span', { class:'e3-eyebrow' }, 'Who fits'),
             el('h2', { class:'e3-h2' }, 'You’re the right operator if…'),
             el('ul', { class:'e3-list' },
-              el('li', null, 'You already own or are buying mid-market storage real estate in a metro outside our current footprint.'),
-              el('li', null, 'You want a turn-key software and operations platform instead of building one.'),
-              el('li', null, 'You’re comfortable being a brand-licensed operator inside E3 standards.'),
+              el('li', null, 'You own or are buying mid-market storage real estate in a metro outside our current footprint.'),
+              el('li', null, 'You want a turn-key operating model instead of building one from scratch.'),
+              el('li', null, 'You’re comfortable being a brand-licensed operator inside the e3 standards.'),
               el('li', null, 'You can commit to a 24-month minimum operating term.')
             )
           )
         )
       )
     ));
+
+    // APPLY
     wrap.appendChild(el('section', { class:'e3-section', id:'apply', style:'background:#1F4D78;color:#fff;' },
       el('div', { class:'e3-container' },
         el('span', { class:'e3-eyebrow', style:'color:#a9c6e2;' }, 'Apply'),
