@@ -55,21 +55,28 @@
   function injectStyles() {
     if (document.getElementById('e3-affcon-styles')) return;
     var css = `
+      /* OPE-2300 v1.2: CSS-only hide of every legacy section on /affiliate
+         and /get-in-touch. Keep only the navbar, back-to-top, and footer.
+         Everything else — breadcrumb hero (red car-wash), contact-info,
+         contact-form, map, client logos, promo — collapses. */
+      body.e3-page-affiliate > section.section.breadcrumb-section,
+      body.e3-page-contact   > section.section.breadcrumb-section,
+      body.e3-page-affiliate > section.section:not(.back-to-top-section):not(.e3-section),
+      body.e3-page-contact   > section.section:not(.back-to-top-section):not(.e3-section),
+      body.e3-page-affiliate > .contact-info-section,
+      body.e3-page-contact   > .contact-info-section,
+      body.e3-page-affiliate > .contact-form-section,
+      body.e3-page-contact   > .contact-form-section,
+      body.e3-page-affiliate > .section-map,
+      body.e3-page-contact   > .section-map,
+      body.e3-page-affiliate > .client-section,
+      body.e3-page-contact   > .client-section,
+      body.e3-page-affiliate > .map-main-block,
+      body.e3-page-contact   > .map-main-block,
+      body.e3-page-affiliate > .promo-section,
+      body.e3-page-contact   > .promo-section,
       body.e3-page-affiliate .legacy-page-content,
-      body.e3-page-contact .legacy-page-content {
-        display: none !important;
-      }
-      /* hide Washmotor leftover on these pages by class + by id */
-      body.e3-page-affiliate .map-main-block,
-      body.e3-page-contact .map-main-block,
-      body.e3-page-affiliate .contact-form-section,
-      body.e3-page-contact .contact-form-section,
-      body.e3-page-affiliate .section.client-section,
-      body.e3-page-contact .section.client-section,
-      body.e3-page-affiliate .promo-section,
-      body.e3-page-contact .promo-section,
-      body.e3-page-affiliate .section.section-promo,
-      body.e3-page-contact .section.section-promo {
+      body.e3-page-contact   .legacy-page-content {
         display: none !important;
       }
       .e3-section {
@@ -89,22 +96,24 @@
         color: #2E74B5;
         margin-bottom: 16px;
       }
-      .e3-h1 {
-        font: 700 clamp(36px,5vw,56px)/1.05 "Oswald","Inter",system-ui,sans-serif;
-        color: #1F4D78;
-        letter-spacing: -.01em;
-        margin: 0 0 20px;
-        text-transform: none;
+      body .e3-h1 {
+        font: 700 clamp(36px,5vw,56px)/1.05 "Oswald","Inter",system-ui,sans-serif !important;
+        color: #1F4D78 !important;
+        letter-spacing: -.01em !important;
+        margin: 0 0 20px !important;
+        text-transform: none !important;
       }
-      .e3-h2 {
-        font: 700 clamp(28px,3.4vw,40px)/1.1 "Oswald","Inter",system-ui,sans-serif;
-        color: #1F4D78;
-        margin: 0 0 16px;
+      body .e3-h2 {
+        font: 700 clamp(28px,3.4vw,40px)/1.1 "Oswald","Inter",system-ui,sans-serif !important;
+        color: #1F4D78 !important;
+        margin: 0 0 16px !important;
+        text-transform: none !important;
       }
-      .e3-h3 {
-        font: 600 20px/1.25 "Oswald","Inter",system-ui,sans-serif;
-        color: #18171a;
-        margin: 0 0 8px;
+      body .e3-h3 {
+        font: 600 20px/1.25 "Oswald","Inter",system-ui,sans-serif !important;
+        color: #18171a !important;
+        margin: 0 0 8px !important;
+        text-transform: none !important;
       }
       .e3-lede {
         font: 400 clamp(17px,1.8vw,20px)/1.55 "DM Sans","Inter",system-ui,sans-serif;
@@ -570,15 +579,4 @@
     // component instance, ISN'T the breadcrumb, ISN'T the back-to-top, ISN'T the
     // footer, and ISN'T a script/style — and hide it.
     Array.prototype.forEach.call(document.body.children, function (node) {
-      if (node === page) return;
-      if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE' || node.tagName === 'NOSCRIPT') return;
-      var role = (node.getAttribute('role') || '').toLowerCase();
-      var cls = (node.className || '').toString().toLowerCase();
-      if (cls.indexOf('navbar') >= 0 || cls.indexOf('nav-bar') >= 0 || role === 'banner' || role === 'navigation') return;
-      // OPE-2300 v1.1: HIDE the Breadcrumb hero on these two pages — its
-      // red car-wash background image is the most visible Washmotor leftover
-      // and the page injection provides its own branded hero.
-      // (other pages keep the breadcrumb as-is)
-      if (cls.indexOf('back-to-top') >= 0 || cls.indexOf('backtotop') >= 0) return;
-      if (cls.indexOf('footer') >= 0 || node.tagName === 'FOOTER') return;
-      if (node.classLis
+      if (node === p
