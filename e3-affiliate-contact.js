@@ -575,15 +575,10 @@
       var role = (node.getAttribute('role') || '').toLowerCase();
       var cls = (node.className || '').toString().toLowerCase();
       if (cls.indexOf('navbar') >= 0 || cls.indexOf('nav-bar') >= 0 || role === 'banner' || role === 'navigation') return;
-      if (cls.indexOf('breadcrumb') >= 0) return;
+      // OPE-2300 v1.1: HIDE the Breadcrumb hero on these two pages — its
+      // red car-wash background image is the most visible Washmotor leftover
+      // and the page injection provides its own branded hero.
+      // (other pages keep the breadcrumb as-is)
       if (cls.indexOf('back-to-top') >= 0 || cls.indexOf('backtotop') >= 0) return;
       if (cls.indexOf('footer') >= 0 || node.tagName === 'FOOTER') return;
-      if (node.classList && node.classList.contains('e3-injected')) return;
-      // hide the legacy body content
-      node.style.display = 'none';
-      node.setAttribute('data-e3-legacy-hidden', '1');
-    });
-  }
-
-  ready(mount);
-})();
+      if (node.classLis
