@@ -120,9 +120,32 @@
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       statusEl.className = 'e3-form-status';
+      // Translate UI fields → /api/marketing/forms-ingest canonical contract.
+      // 'name' → first_name+last_name (split on first space)
+      // 'location' → location_id
+      // 'topic'/'company'/'market' ride as referral_source / extras
+      // 'source' → form_name (one of: contact, newsletter, tour-inquiry, affiliate)
       var fd = new FormData(form);
-      var payload = { source:source };
-      fd.forEach(function (v, k) { payload[k] = v; });
+      var raw = {};
+      fd.forEach(function (v, k) { raw[k] = v; });
+      var payload = {};
+      var formName = (source === 'affiliate_inquiry') ? 'affiliate' : 'contact';
+      payload.form_name = formName;
+      if (raw.email) payload.email = raw.email;
+      if (raw.phone) payload.phone = raw.phone;
+      if (raw.message) payload.message = raw.message;
+      if (raw.location) payload.location_id = raw.location;
+      if (raw.name) {
+        var parts = String(raw.name).trim().split(/\s+/);
+        payload.first_name = parts[0] || raw.name;
+        if (parts.length > 1) payload.last_name = parts.slice(1).join(' ');
+      }
+      // Track the original UI source in referral_source for triage
+      var extras = [];
+      if (raw.topic) extras.push('topic:' + raw.topic);
+      if (raw.company) extras.push('company:' + raw.company);
+      if (raw.market) extras.push('market:' + raw.market);
+      payload.referral_source = (source === 'affiliate_inquiry' ? 'affiliate_form' : 'contact_form') + (extras.length ? ' | ' + extras.join(' | ') : '');
       submitBtn.disabled = true; submitBtn.textContent = 'Sending…';
       fetch('https://e3-storage-platform.vercel.app/api/marketing/forms-ingest', {
         method:'POST', headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
